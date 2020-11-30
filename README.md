@@ -6,10 +6,9 @@ next...
 
 <https://actix.rs/docs/application/>
 
-At: "...Application state is shared with all routes and resources within the same scope...."
+At: "...Shared Mutable State
 
-(Use the new hello-world-state app. Need to update the toml.)
-
+HttpServer accepts an application factory..."
 
 
 =

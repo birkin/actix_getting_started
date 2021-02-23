@@ -1,31 +1,37 @@
-use actix_web::{ get, web, App, HttpServer };
+use actix_web::{ web, App, HttpServer };
+use std::sync::Mutex;
 
 
 // -- This struct represents state
-struct AppState {
-    app_name: String,
+struct AppStateWithCounter {
+    counter: Mutex<i32>,  // <- Mutex is necessary to mutate safely across threads
 }
 
 
-#[ get("/") ]
-async fn index( data: web::Data<AppState> ) -> String {
-    let app_name = &data.app_name;  // <- get app_name
+async fn index( data: web::Data<AppStateWithCounter> ) -> String {
+    println!("hereB");
+    let mut counter = data.counter.lock().unwrap();  // <- get counter's MutexGuard
+    *counter += 1;  // <-- access counter inside MutexGuard
 
-    format!( "Hello ``{}``!", app_name )  // <- response with app_name
+    format!( "Request number: ``{}``", counter )  // <- response with count
 }
 
 
 #[ actix_web::main ]
 async fn main() -> std::io::Result<()> {
-    HttpServer::new( || {
+    println!("hereA");
+    let counter = web::Data::new( AppStateWithCounter{
+        counter: Mutex::new(0),
+    } );
+
+
+    HttpServer::new( move || {
+        // move counter into the closure
         App::new()
-            .data( AppState {
-                app_name: String::from( "Actix-web" ),
-            }
-            )
-            .service( index )
-    }
-    )
+            // Note: using app_data instead of data
+            .app_data( counter.clone() )  // <- register the created data
+            .route( "/", web::get().to(index) )
+    } )
     .bind( "127.0.0.1:8080" )?
     .run()
     .await
